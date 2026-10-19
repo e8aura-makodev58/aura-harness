@@ -1,0 +1,27 @@
+# systemd user service for the Aura daemon.
+#
+#   install -Dm755 target/release/aurad ~/.local/bin/aurad
+#   install -Dm755 target/release/aura  ~/.local/bin/aura
+#   install -Dm644 contrib/aurad.service ~/.config/systemd/user/aurad.service
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now aurad
+#
+# Stopping the service stops every agent it started (KillMode=control-group),
+# so a clean stop leaves nothing running. The daemon restarts on failure and
+# reconciles its database on start, so work resumes without losing tasks.
+
+[Unit]
+Description=Aura harness daemon
+After=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/aurad --config %h/.config/aura/aura.toml
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+# Logs go to the journal: journalctl --user -u aurad -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,3 @@
+Ran cargo test: 42 passed.
+The reset button in the settings page is unchanged.
+Wrote .aura/result.json.

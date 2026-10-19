@@ -1,0 +1,48 @@
+# Example configuration for the aura-harness repository itself.
+# Copy to ~/.config/aura/aura.toml and adjust the paths.
+
+# Where the database, worktrees, logs and the socket live.
+# state_dir = "/home/you/.local/share/aura"
+
+[repo]
+path = "/home/you/aura-harness"
+main_branch = "main"
+
+[defaults]
+# Start conservative: approve each plan yourself until the checks have proven
+# themselves. Switch to "auto" when you trust them.
+autonomy = "ask-plan"
+max_parallel_runs = 3
+
+[budgets]
+per_task_runs = 3
+run_timeout_minutes = 60
+idle_timeout_minutes = 10
+
+[roles]
+planner = ["claude-code"]
+worker = ["claude-code", "codex"]
+reviewer = ["codex", "claude-code"]
+# Let the reviewer be the worker's model only when nothing else is available.
+allow_self_review = false
+
+[acceptance]
+# Acceptance commands run without a shell. Only these programs may start.
+allowed_programs = ["cargo"]
+# Added to every task. The merge is rejected if any fails.
+default_checks = ["cargo test --workspace --quiet"]
+
+# Provider argument lists below are the built-in defaults. Confirm them against
+# your installed CLI versions before relying on them (docs/implementation.md).
+#
+# [providers.claude-code]
+# command = "claude"
+# args = ["-p", "{prompt}", "--output-format", "json", "--permission-mode", "acceptEdits"]
+# max_parallel = 2
+# quota_window = "5h"
+#
+# [providers.codex]
+# command = "codex"
+# args = ["exec", "--sandbox", "workspace-write", "{prompt}"]
+# max_parallel = 1
+# quota_window = "5h"
