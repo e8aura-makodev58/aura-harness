@@ -1,6 +1,6 @@
 # Autonomous Aura harness: design
 
-Status: **draft for review**. Nothing here is implemented yet.
+Status: **implemented**, except the Telegram bridge, which is deferred until you create the bot. [implementation.md](implementation.md) says what was built, what was verified, what is still assumed, and where the build departs from this design (its "Deviations from the design" table).
 
 This document extends [aura-harness.md](../aura-harness.md). That file describes the manual
 process as it runs today: humans start agents in zellij windows, and each agent polls a
@@ -172,8 +172,8 @@ autonomy: auto                    # auto | ask-plan | ask-each
 
 ### 4.3 Result record
 
-Each worker run must end by writing `.aura/result.json` in its worktree and committing it
-on its branch:
+Each worker run must end by writing `.aura/result.json` in its worktree. The file is not
+committed. The daemon reads it and never merges `.aura/` into `master`:
 
 ```json
 {
@@ -232,10 +232,9 @@ single writer.
 The merge queue is the only path into `master`. For each candidate, in order:
 
 1. Create a temporary worktree from current `master`, merge the candidate branch into it.
-2. If the merge conflicts, do not resolve it with an agent by default. Mark the task
-   `REJECTED` with the conflicting files and queue a rework run, which rebases on the
-   current `master`. (Rebase is allowed here because the task branch is the worker's own
-   and has not been published. See §8.)
+2. If the merge conflicts, abort it. The task goes back to a worker with the conflicting
+   files listed, and the worker merges `master` into its own branch and resolves the conflict.
+   The daemon never rewrites a branch.
 3. Run every acceptance check on the merge result.
 4. All green: fast-forward or merge `master` to the candidate, record the merge commit,
    mark `DONE`, and update the mirror.
@@ -448,8 +447,8 @@ are designed to be sent from a phone.
 
 - `master`: moved only by the merge queue.
 - `task/<id>`: one per task, created from `master` when the task starts. Owned by its
-  worker. Rebased by the daemon only while unpublished. Never force-pushed to a shared
-  remote.
+  worker. The daemon never rewrites it. Conflicts are resolved by the worker merging `master`
+  in. Never force-pushed.
 - `harness`: a branch the daemon writes to, holding the mirror in `.aura/tasks/`,
   `.aura/directives/` and `.aura/events.jsonl`. Humans read it; agents do not write it.
   Keeping it separate means mirror commits never conflict with code.
@@ -632,6 +631,19 @@ Phase 0 and phase 1 are the first things to build. The UI is last on purpose: it
 part the user asked to be able to close, and it should be the easiest to replace.
 
 ---
+
+Implementation status by phase:
+
+| Phase | Status |
+|---|---|
+| 0. Records | Built: directives, tasks, runs, questions, `aura task add`, `harness` mirror |
+| 0.5. Quota spike | Not done here: needs the real CLIs and a spent quota. Procedure in implementation.md |
+| 1. One worker | Built: scheduler, claude-code and codex adapters, quota states, result records, scope check, reconciliation |
+| 2. Review and merge queue | Built: reviewer role, integrator, serialized merges, rework loop |
+| 3. Parallel and multi-provider | Built: scope locks, parallel limits, provider fallback, budgets. Antigravity and Hermes disabled until confirmed |
+| 4. Telegram | Deferred by the owner |
+| 5. Local UI | Built as a terminal dashboard (`aura watch`) |
+| 6. Hardening | Built: restart and kill-switch tests, lock against two daemons, socket path guard. Chaos testing beyond these not done |
 
 ## 14. Decisions
 
