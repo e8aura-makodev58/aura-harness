@@ -282,12 +282,22 @@ stop(run_handle)
 usage(run_handle) -> tokens, cost
 ```
 
-- **Claude Code:** `claude -p` with a permission mode limited to the worktree; output in
-  JSON for usage accounting.
-- **Codex, Gemini, CodeBuddy:** the same contract through their headless modes. Each
-  adapter is optional. The harness works with one provider.
-- The reviewer should default to a different provider from the worker. The config sets
-  that pairing, so the same model does not review its own code.
+Supported providers, in adapter order:
+
+1. **Claude Code:** `claude -p` with a permission mode limited to the worktree; JSON output
+   for usage accounting. First adapter to build.
+2. **Codex:** `codex exec` in non-interactive mode. Second adapter.
+3. **Antigravity:** headless mode not yet verified. The adapter is blocked until a
+   non-interactive entry point is confirmed. If none exists, it is used only as a manual
+   worker and is excluded from scheduling.
+4. **Hermes:** same as Antigravity. Confirm the headless interface before building the adapter.
+
+Each adapter is optional. The harness must work with a single provider.
+
+- The reviewer defaults to a different provider from the worker. The config sets the
+  pairing, so the same model does not review its own code.
+- Each adapter also reports its quota state (see §6A). Without that, the scheduler cannot
+  use the adapter.
 
 Each run gets its own log file under `~/.local/share/aura/runs/<run-id>.log`. Logs are
 viewable from every client.
@@ -302,6 +312,71 @@ viewable from every client.
 - Live provider calls from workers are not needed for normal work. The planner and the
   integrator are the only places that run anything that touches external services, and
   only when the task says so.
+
+---
+
+## 6A. Subscription quota and refresh times
+
+All providers run on subscriptions, not per-token billing. Usage is limited by windows
+(several providers use a rolling window plus a longer weekly cap, depending on the plan).
+When a window is spent, the provider refuses new runs until it refreshes. The scheduler must
+therefore know, per provider, whether it can run now and, if not, when it can next run.
+
+### Quota state
+
+Each provider has one quota state, stored in the `budgets` table and shown in every client:
+
+| State | Meaning | Scheduler behaviour |
+|---|---|---|
+| `available` | Runs are expected to succeed | Eligible for scheduling |
+| `limited(reset_at, source)` | Refused until `reset_at` | Not eligible. Wake at `reset_at` plus a small jitter |
+| `estimated_limited(reset_at)` | Refused. The reset time is derived, not reported | Same as `limited`, plus a probe run at `reset_at` |
+| `unknown` | Refused with no reset time | Exponential back-off (5, 10, 20 … capped at 60 min), then a cheap probe run |
+| `disabled` | Taken out of use by the human | Not eligible |
+
+### Detection, most to least authoritative
+
+1. **Reset time in the provider's own message.** The adapter parses the refusal from stdout,
+   stderr or JSON output and stores the reset time with `source = message`.
+2. **A usage or status command, if the CLI has one.** The adapter queries it on a timer.
+   The daemon calls it, not the agents. Whether each CLI offers one is unverified (see
+   open questions).
+3. **Estimated window.** If the provider reports a limit without a time, the daemon
+   computes the reset from the start of the current window, using the window length for
+   that plan. The state is `estimated_limited`.
+4. **Unknown.** Back off as above. Never retry in a tight loop.
+
+The adapter contract in §6 gains one call: `quota(provider) -> state`.
+
+### Scheduling rules
+
+- A run never starts on a provider that is not `available`.
+- If a queued task's role allows another provider, the scheduler uses that provider.
+- If no provider is available, the directive shows `WAITING_FOR_QUOTA` and the daemon sleeps
+  until the earliest `reset_at`. It does not spin.
+- Priority when quota is scarce: merge queue, then reviews, then planning, then new worker
+  runs. Finishing work frees capacity, so it goes first.
+- Each provider is scheduled against its own windows. The daemon records the usage of each
+  run, so it can spread work across windows rather than use up one window early.
+
+### When a limit hits during a run
+
+- The run is marked `interrupted` and does not count against the task's run budget.
+- If the adapter supports checkpoints, the worktree is committed as WIP on the task branch.
+  Otherwise the worktree is kept as it is. The next run starts from the branch state and
+  its brief says so.
+- The task returns to `QUEUED` and waits for the provider's reset.
+
+### Notifications
+
+One message when a provider is limited (with the reset time and source), and one when it
+recovers. Not one per run.
+
+### Verification before phase 1 is done
+
+Each CLI's real limit message, and any status command, must be captured once and stored as
+a fixture. The adapter's parser is tested against these recorded samples. The doc does not
+assume any message format.
 
 ---
 
@@ -419,8 +494,8 @@ What it shows:
 
 Implementation options, to decide once the daemon exists:
 
-1. **Terminal UI** (for example Ratatui in Rust or Textual in Python). Fits how zellij is
-   used today. Works over SSH.
+1. **Terminal UI** (Ratatui, since the daemon is in Rust). Fits how zellij is used today.
+   Works over SSH.
 2. **Local web UI** served by `aurad` on `127.0.0.1` only, opened in a browser. Easiest
    to make rich (diffs, logs). Needs a token.
 
@@ -430,6 +505,10 @@ terminal already. Add the web UI later if diffs and logs are needed in a browser
 ---
 
 ## 10. Telegram bridge
+
+**Deferred.** You will create the bot yourself. We will settle the details (command set,
+quiet hours, confirmation rules) when we reach phase 4. The outline below is a starting
+point, not a decision.
 
 Telegram is a client, not a second control path. Every command maps to a daemon API call,
 and the bridge keeps no state.
@@ -474,21 +553,30 @@ main_branch = "master"
 harness_branch = "harness"
 
 [defaults]
-autonomy = "auto"
+autonomy = "ask-plan"              # see §14 for why
 max_parallel_runs = 3
 
-[providers.claude]
+[providers.claude-code]
 command = "claude"
 max_parallel = 2
+quota_window = "5h"                # plan-dependent; confirmed in phase 1
+weekly_cap = true
 
 [providers.codex]
 command = "codex"
 max_parallel = 1
+quota_window = "5h"                # unverified
+
+[providers.antigravity]
+enabled = false                    # until a headless mode is confirmed
+
+[providers.hermes]
+enabled = false                    # until a headless mode is confirmed
 
 [roles]
-planner  = "claude"
-worker   = ["claude", "codex"]     # used in order, or by task label
-reviewer = "codex"                 # different from the worker by default
+planner  = "claude-code"
+worker   = ["claude-code", "codex"]  # used in order, or by task label
+reviewer = "codex"                   # different from the worker by default
 
 [budgets]
 per_directive_tokens = 20_000_000
@@ -532,7 +620,8 @@ Each phase is usable on its own, and the manual process keeps working until phas
 | Phase | Deliverable | Done when |
 |---|---|---|
 | **0. Records** | Task and directive schema; `aura` CLI to create and list them; the `harness` mirror | A manual task can be created, listed and mirrored without any agent running |
-| **1. One worker** | Daemon, scheduler, claude adapter, one worker run per task, result record, scope check | A task runs headless, leaves a result record, and its state is correct after a daemon restart |
+| **0.5. Quota spike** | Capture real limit messages and any status command from Claude Code and Codex; store as fixtures | Fixtures exist for each CLI, and the parsers are written against them |
+| **1. One worker** | Daemon, scheduler, claude-code adapter, quota states (§6A), one worker run per task, result record, scope check | A task runs headless, leaves a result record, is paused cleanly at a simulated limit and resumes at the reset time, and its state is correct after a daemon restart |
 | **2. Review and merge queue** | Reviewer role, integrator, serialized merge queue, rework loop | A task goes from directive to `DONE` on `master` with no human action under `auto` |
 | **3. Parallel and multi-provider** | Scope locks, concurrency limits, codex/gemini adapters, budgets | Two non-overlapping tasks run at once; a provider outage does not stop the others |
 | **4. Telegram** | Bridge, auth, commands, pushes, confirmations | Directive, approve, answer, pause, and kill all work from a phone |
@@ -556,21 +645,28 @@ Settled by this draft (change them if you disagree):
 6. Telegram uses long polling and an allowlist. No inbound port.
 7. The UI is a client, and it is built after the daemon.
 
-Open questions for you:
+8. **Language: Rust** for the daemon, the TUI and the CLI. (Decided by the user.)
+9. **Providers:** Claude Code, Codex, Antigravity, Hermes (decided by the user). Claude Code
+   and Codex are the first two adapters. Antigravity and Hermes wait until a headless mode
+   is confirmed.
+10. **Target repo:** this repository, `aura-harness`. The harness is for this project. The
+    Compass repo mentioned in `aura-harness.md` is only the origin of the manual process.
+11. **Subscription quota:** the scheduler is quota-aware and pauses providers until their
+    limits refresh (§6A). This is a hard requirement from the user.
+12. **Default autonomy: `ask-plan`** for the first directives. It is the safer choice while
+    the checks and quota handling are being proven. Move to `auto` once a few directives
+    have run cleanly. This is my call, and it is easy to change in config.
+13. **Telegram: deferred.** The user will create the bot, and we design the bridge in phase 4.
 
-1. **Language and stack.** Rust (matches a long-running daemon well) or TypeScript/Python
-   (faster to iterate, and the agent CLIs are already in those ecosystems)? I lean Rust
-   for the daemon and a TUI, but either works.
-2. **Which providers you actually run.** This sets the adapters for phase 1 and 3. Claude
-   Code only is the smallest first step.
-3. **Target repos.** Only `aura-harness`, or also the Compass repo that the manual process
-   was written for? The config supports several repos, but the first version targets one.
-4. **Default autonomy.** `auto` assumes you trust the checks. `ask-plan` is the safer
-   starting point for the first few directives.
-5. **Budget caps.** The numbers in §11 are placeholders. What spend or token ceiling per
-   directive would you accept?
-6. **Telegram.** Is a bot you create yourself with your Telegram user ID allowed, and do
-   you want quiet hours?
+Still open (to verify, not to decide):
+
+1. **Quota signals per CLI.** Whether Claude Code and Codex expose a usage or status
+   command, and the exact refusal message and window lengths for the user's plans. Answered
+   by the phase 0.5 spike.
+2. **Headless modes for Antigravity and Hermes.** Answered before their adapters are
+   scheduled.
+3. **Budget caps.** The numbers in §11 are placeholders. Set them once the quota ledger
+   shows real usage.
 
 ---
 
