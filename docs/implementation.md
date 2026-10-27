@@ -24,8 +24,21 @@ bridge when we reach that phase. The API it will use already exists.
 
 ## Quick start
 
-Requirements: Rust 1.82 or newer, `git`, a C compiler (SQLite is bundled), and the provider
-CLIs you want to use.
+Requirements:
+
+- Rust 1.82 or newer (`rustup`), `git`, and a C compiler (SQLite is bundled).
+- Provider CLIs, each installed and signed in with your subscription. Claude Code (`claude`) is
+  the default planner and worker. Codex (`codex`) is the default reviewer. If Codex is not
+  installed, reviews fail and tasks block. Either install it or edit `[roles]` in the config.
+- Your target repository must be a git repository with a `main` branch, or set
+  `repo.main_branch` to the branch you use.
+
+**Headless permissions:** the built-in Claude arguments use `--permission-mode acceptEdits`.
+That allows file edits but may not allow shell commands such as `git` and `cargo` in print mode.
+This is unverified. Confirm it with one small directive, and if workers block on shell commands,
+add an allow list to the `claude-code` provider, for example
+`args = ["-p", "{prompt}", "--output-format", "json", "--permission-mode", "acceptEdits",
+"--allowedTools", "Bash(git:*)", "Bash(cargo:*)"]`.
 
 ```bash
 cargo build --release
