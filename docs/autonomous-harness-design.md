@@ -624,7 +624,7 @@ Each phase is usable on its own, and the manual process keeps working until phas
 | **2. Review and merge queue** | Reviewer role, integrator, serialized merge queue, rework loop | A task goes from directive to `DONE` on `master` with no human action under `auto` |
 | **3. Parallel and multi-provider** | Scope locks, concurrency limits, codex/gemini adapters, budgets | Two non-overlapping tasks run at once; a provider outage does not stop the others |
 | **4. Telegram** | Bridge, auth, commands, pushes, confirmations | Directive, approve, answer, pause, and kill all work from a phone |
-| **5. Local UI** | TUI (or web) as a client; reconnect from event cursor | Closing and reopening the UI changes nothing about running work |
+| **5. Local UI** | Web page and TUI as clients; reconnect from event cursor | Closing and reopening the UI changes nothing about running work |
 | **6. Hardening** | Sandbox review, reconciliation tests, chaos tests (kill daemon mid-run), backups | Daemon killed at each state transition recovers to a consistent state |
 
 Phase 0 and phase 1 are the first things to build. The UI is last on purpose: it is the
@@ -642,7 +642,7 @@ Implementation status by phase:
 | 2. Review and merge queue | Built: reviewer role, integrator, serialized merges, rework loop |
 | 3. Parallel and multi-provider | Built: scope locks, parallel limits, provider fallback, budgets. Antigravity and Hermes disabled until confirmed |
 | 4. Telegram | Deferred by the owner |
-| 5. Local UI | Built as a terminal dashboard (`aura watch`) |
+| 5. Local UI | Built: a web page with dockable panels (served by the daemon, token-protected) and a terminal dashboard (`aura watch`) |
 | 6. Hardening | Built: restart and kill-switch tests, lock against two daemons, socket path guard. Chaos testing beyond these not done |
 
 ## 14. Decisions

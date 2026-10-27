@@ -11,8 +11,9 @@ assumed. The design it implements is [autonomous-harness-design.md](autonomous-h
 | `aura-store` | SQLite persistence (WAL, schema version 1). Directives, tasks, runs, questions, quota, and an append-only event log. |
 | `aura-git` | Git operations through the `git` CLI: worktrees, branches, merges with conflict detection, compare-and-swap ref updates, exclude entries. |
 | `aura-adapters` | One adapter per provider CLI: argv construction and usage-limit detection with reset-time parsing. |
-| `aurad` | The daemon: scheduler, process supervision, merge integrator, `harness` mirror, Unix-socket API. |
-| `aura-cli` | The `aura` command and the `aura watch` dashboard. Both are clients of the daemon API. |
+| `aurad` | The daemon: scheduler, process supervision, merge integrator, `harness` mirror, Unix-socket API, and the local web interface. |
+| `aura-cli` | The `aura` command, `aura web` (prints the page link) and the `aura watch` terminal dashboard. All are clients of the daemon API. |
+| `aurad/web` | The web interface: a page built with [Dockview](https://github.com/dockview/dockview) (MIT, vendored, no build step). Panels dock, split, resize and float; the layout is remembered per browser. Compiled into the daemon. |
 
 Providers: **Claude Code** and **Codex** are configured. **Antigravity** and **Hermes**
 ship disabled, because no headless mode has been confirmed for them. Enabling one requires
@@ -47,7 +48,8 @@ aura tasks
 aura task show T-0001     # brief, notes, runs, questions
 aura answer Q-0001 "exponential backoff capped at 30 s"
 aura events --follow
-aura watch                # live dashboard; q quits, the daemon keeps running
+aura watch                # terminal dashboard; q quits, the daemon keeps running
+aura web                  # prints the web interface link (http://127.0.0.1:7878/#token=…)
 ```
 
 Stop everything: `aura kill --yes` (stops runs and pauses), then `aura resume` to continue.
@@ -140,6 +142,7 @@ Run it yourself with `cargo test --workspace`. Results at the time of writing:
 | `aura-adapters` | 15 | Argv building, disabled providers, limit detection and reset parsing against fixtures |
 | `aurad` (merge) | 3 | Landing on a checkout, failing checks block landing, conflicts leave main untouched |
 | `aurad` (e2e) | 10 | See below |
+| `aurad` (web) | 4 | Page served with security headers; API refuses requests without the token; foreign Host headers refused; token file created private |
 
 The end-to-end suite runs the real engine on a temporary repository. A shell script stands
 in for the agent CLIs and writes the same records a real agent is asked to write. It covers:
@@ -164,6 +167,31 @@ dashboard in a pseudo-terminal).
 **Not verified:** the real provider CLIs and their limit messages; the systemd unit; the
 dashboard under interactive use beyond rendering and quitting; behaviour under concurrent
 load beyond the two-run tests; long-running merges with real test suites.
+
+## Web interface
+
+`aurad` serves the page on `127.0.0.1:7878` (set `[web] listen` to change it; the daemon refuses
+non-loopback addresses). Run `aura web` to print the link. It carries an access token in the
+URL fragment, which the browser never sends to the server. The page stores it in the browser and
+removes it from the address bar.
+
+- **Access:** the token lives in `state_dir/web.token` (mode 0600, created on first start). The
+  API needs it as a bearer token. Requests whose `Host` header is not `127.0.0.1` or `localhost`
+  are refused, which blocks DNS-rebinding attacks.
+- **Safety in the page:** agent-written text is always inserted as text, never as HTML. The page
+  sends a Content-Security-Policy that allows scripts only from the daemon.
+- **Panels:** Tasks, Task (detail, approve, cancel, answer questions, runs), Directives (send a
+  goal to the planner), Live log (follows the newest run), Quota & runs, Events. Pause, resume,
+  kill (with confirmation) and reset-layout are in the top bar.
+- **Refresh:** the page polls the daemon once a second. It does not hold a long connection, so
+  closing it or losing the network changes nothing about running work.
+
+**Checked:** the four HTTP tests above, and a headless Chromium run against the live daemon: the
+page connects, shows six panels and live tasks, strips the token from the address bar, logs no
+errors, submits a directive from the form, pauses and resumes, and follows the newest run's log.
+
+**Not checked:** drag-to-dock and resize by mouse, and layout persistence across reloads. These
+come from Dockview and have not been exercised by an automated test.
 
 ## Known limitations
 

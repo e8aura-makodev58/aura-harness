@@ -18,7 +18,8 @@ running.
 | `crates/aura-git` | Worktrees, branches, merges, compare-and-swap ref updates |
 | `crates/aura-adapters` | Provider CLIs and usage-limit detection |
 | `crates/aurad` | The daemon (scheduler, integrator, local API) |
-| `crates/aura-cli` | The `aura` command and `aura watch` |
+| `crates/aura-cli` | The `aura` command, `aura web` and `aura watch` |
+| `crates/aurad/web` | The web interface (Dockview, vendored) |
 | `contrib/` | systemd unit and example configuration |
 | `docs/` | Design and implementation guide |
 
@@ -29,7 +30,8 @@ cargo build --release
 cp contrib/aura.example.toml ~/.config/aura/aura.toml   # set repo.path
 target/release/aurad --config ~/.config/aura/aura.toml &
 target/release/aura directive "Describe the change you want"
-target/release/aura watch
+target/release/aura watch          # terminal dashboard
+target/release/aura web            # link to the web interface (127.0.0.1:7878)
 ```
 
 ## Test
