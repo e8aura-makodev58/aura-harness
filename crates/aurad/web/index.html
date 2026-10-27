@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aura</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <header id="bar">
+      <strong class="brand">Aura</strong>
+      <span id="conn" class="pill">connecting</span>
+      <span id="repo" class="muted"></span>
+      <span class="spacer"></span>
+      <span id="msg" class="muted"></span>
+      <button id="pause" type="button">Pause</button>
+      <button id="kill" type="button" class="danger">Kill</button>
+      <button id="reset-layout" type="button">Reset layout</button>
+    </header>
+    <main id="dock"></main>
+    <script src="/vendor/dockview-core.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

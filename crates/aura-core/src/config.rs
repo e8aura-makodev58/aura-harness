@@ -15,6 +15,7 @@ pub struct Config {
     pub roles: Roles,
     pub budgets: Budgets,
     pub acceptance: Acceptance,
+    pub web: WebConfig,
     /// Where the database, worktrees, logs and socket live.
     /// Defaults to `$HOME/.local/share/aura`.
     pub state_dir: Option<PathBuf>,
@@ -78,6 +79,24 @@ pub struct Acceptance {
     pub allowed_programs: Vec<String>,
     /// Commands added to every task's acceptance list.
     pub default_checks: Vec<String>,
+}
+
+/// The local web interface served by the daemon.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(default)]
+pub struct WebConfig {
+    pub enabled: bool,
+    /// Must be a loopback address. The UI is not meant for other machines.
+    pub listen: String,
+}
+
+impl Default for WebConfig {
+    fn default() -> Self {
+        WebConfig {
+            enabled: true,
+            listen: "127.0.0.1:7878".into(),
+        }
+    }
 }
 
 impl Default for RepoConfig {
@@ -202,6 +221,7 @@ impl Default for Config {
             roles: Roles::default(),
             budgets: Budgets::default(),
             acceptance: Acceptance::default(),
+            web: WebConfig::default(),
             state_dir: None,
         }
     }
@@ -264,6 +284,20 @@ impl Config {
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.repo.main_branch.trim().is_empty() {
             return Err(ConfigError::Invalid("repo.main_branch is empty".into()));
+        }
+        if self.web.enabled {
+            let addr: std::net::SocketAddr = self.web.listen.parse().map_err(|_| {
+                ConfigError::Invalid(format!(
+                    "web.listen {:?} is not an address",
+                    self.web.listen
+                ))
+            })?;
+            if !addr.ip().is_loopback() {
+                return Err(ConfigError::Invalid(format!(
+                    "web.listen {} must be a loopback address",
+                    self.web.listen
+                )));
+            }
         }
         if self.defaults.max_parallel_runs == 0 {
             return Err(ConfigError::Invalid(

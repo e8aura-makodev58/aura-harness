@@ -6,3 +6,4 @@ pub mod engine;
 pub mod merge;
 pub mod proc;
 pub mod server;
+pub mod web;

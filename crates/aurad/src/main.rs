@@ -4,7 +4,7 @@
 use anyhow::{Context, Result};
 use aura_core::Config;
 use aurad::engine::Engine;
-use aurad::server;
+use aurad::{server, web};
 use std::fs;
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
@@ -56,6 +56,7 @@ fn main() -> Result<()> {
     // would race this one for runs and merges, so it must not start.
     let _lock = acquire_lock(&paths.state_dir.join("aurad.lock"))?;
     let socket = paths.socket.clone();
+    let web = config.web.clone();
     let engine = Engine::open(config).context("starting engine")?;
     eprintln!(
         "aurad: repo {}, state {}",
@@ -64,6 +65,22 @@ fn main() -> Result<()> {
     );
 
     let engine = Arc::new(Mutex::new(engine));
+
+    if web.enabled {
+        let token = web::load_or_create_token(&paths.state_dir.join("web.token"))
+            .context("creating the web access token")?;
+        let listen = web.listen.clone();
+        let ui = Arc::clone(&engine);
+        std::thread::spawn(move || {
+            if let Err(err) = web::serve(&listen, token, ui) {
+                eprintln!("aurad: web interface stopped: {err:#}");
+            }
+        });
+        eprintln!(
+            "aurad: web UI at http://{}/ (run `aura web` for the link)",
+            web.listen
+        );
+    }
 
     let ticker = Arc::clone(&engine);
     std::thread::spawn(move || loop {

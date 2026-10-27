@@ -26,6 +26,11 @@ reviewer = ["codex", "claude-code"]
 # Let the reviewer be the worker's model only when nothing else is available.
 allow_self_review = false
 
+[web]
+# The web interface. Loopback only; the token is in state_dir/web.token.
+enabled = true
+listen = "127.0.0.1:7878"
+
 [acceptance]
 # Acceptance commands run without a shell. Only these programs may start.
 allowed_programs = ["cargo"]

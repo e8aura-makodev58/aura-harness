@@ -94,6 +94,8 @@ enum Command {
     Quota,
     /// Open the live dashboard. Quit with q; the daemon keeps running.
     Watch,
+    /// Print the link to the web interface, with its access token.
+    Web,
 }
 
 #[derive(Subcommand)]
@@ -133,6 +135,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Command::Watch => return tui::run(&client),
+        Command::Web => return print_web_link(&config),
         Command::Events { since, follow } => return events(&client, since, follow, cli.json),
         _ => {}
     }
@@ -192,7 +195,7 @@ fn request_for(command: &Command) -> Result<(&'static str, Value)> {
         Command::Logs { run, tail } => ("logs", json!({ "run": run, "tail": tail })),
         Command::Runs { task, limit } => ("runs", json!({ "task": task, "limit": limit })),
         Command::Quota => ("quota", json!({})),
-        Command::Events { .. } | Command::Watch => bail!("handled before dispatch"),
+        Command::Events { .. } | Command::Watch | Command::Web => bail!("handled before dispatch"),
     })
 }
 
@@ -434,4 +437,21 @@ fn text(v: &Value) -> String {
 
 fn as_list(v: &Value) -> &[Value] {
     v.as_array().map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// Prints the web address with the token in the fragment. The fragment is never
+/// sent to the server, and the page removes it from the address bar on load.
+fn print_web_link(config: &Config) -> Result<()> {
+    if !config.web.enabled {
+        bail!("the web interface is disabled (web.enabled = false)");
+    }
+    let token_path = config.paths().state_dir.join("web.token");
+    let token = std::fs::read_to_string(&token_path).with_context(|| {
+        format!(
+            "no access token at {}; start aurad once to create it",
+            token_path.display()
+        )
+    })?;
+    println!("http://{}/#token={}", config.web.listen, token.trim());
+    Ok(())
 }
