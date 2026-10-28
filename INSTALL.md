@@ -112,6 +112,21 @@ The unit file expects `aurad` in `~/.local/bin` and the config in
 `~/.config/aura/aura.toml`. Stopping the service also stops every agent it
 started.
 
+**PATH:** services do not inherit your shell's `PATH`. The unit sets one that covers
+`~/.local/bin` and `~/.cargo/bin`. If `claude` or `codex` is installed somewhere else
+(for example a global npm directory), add that directory with a drop-in, then restart:
+
+```bash
+mkdir -p ~/.config/systemd/user/aurad.service.d
+printf '[Service]\nEnvironment="PATH=/path/to/provider/bin:%%h/.local/bin:%%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin"\n' \
+  > ~/.config/systemd/user/aurad.service.d/path.conf
+systemctl --user daemon-reload && systemctl --user restart aurad
+```
+
+**Survive logout:** a user service stops when you log out, unless lingering is on.
+Enable it once with `loginctl enable-linger $USER`. This is a system-wide setting for
+your account, so enable it only if you want Aura to keep running unattended.
+
 ## 5. First run
 
 ```bash
@@ -197,6 +212,7 @@ Delete them with `git branch -D` if you no longer want them.
 | `another aurad is already running` | A daemon is already using this state directory. Stop it, or check `systemctl --user status aurad`. |
 | `socket path … is too long` | Set `state_dir` to a shorter path. |
 | `repository path … does not exist` | Fix `[repo] path`. |
+| `claude` or `codex` not found in the service, but found in your shell | Services do not use your shell's `PATH`. See the PATH note in step 4. |
 | `branch main does not exist` | Set `[repo] main_branch` to your branch name. |
 | Tasks end up `blocked` with "cannot start reviewer" | Codex is missing. Install it, or change `[roles] reviewer`. |
 | Workers fail on shell commands such as `git` or `cargo` | The headless permission mode may block them. See the note in [docs/implementation.md](docs/implementation.md) and add an allow list to the `claude-code` provider. |

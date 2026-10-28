@@ -7,7 +7,8 @@
 #   systemctl --user enable --now aurad
 #
 # Stopping the service stops every agent it started (KillMode=control-group),
-# so a clean stop leaves nothing running. The daemon restarts on failure and
+# so a clean stop leaves nothing running. The service stops at logout unless
+# lingering is enabled: loginctl enable-linger $USER The daemon restarts on failure and
 # reconciles its database on start, so work resumes without losing tasks.
 
 [Unit]
@@ -15,6 +16,9 @@ Description=Aura harness daemon
 After=network-online.target
 
 [Service]
+# Services do not inherit your shell's PATH. Put the directories that hold
+# claude, codex and cargo here. Add the directory of each provider CLI you use.
+Environment="PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
 ExecStart=%h/.local/bin/aurad --config %h/.config/aura/aura.toml
 Restart=on-failure
 RestartSec=5
