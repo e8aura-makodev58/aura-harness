@@ -47,7 +47,8 @@ cp contrib/aura.example.toml ~/.config/aura/aura.toml
 Edit `~/.config/aura/aura.toml`:
 
 - **`[repo] path`**: the absolute path of the repository the agents will work on.
-  This is required.
+  This is required. There is no default. The example's `/absolute/path/to/your/repo`
+  placeholder must be replaced. See "Choosing the repository" below.
 - **`[repo] main_branch`**: the branch to merge into. Defaults to `main`.
 - **`[acceptance] default_checks`**: the commands every merge must pass. The
   example runs `cargo test --workspace --quiet`. Change it to suit your project.
@@ -61,6 +62,24 @@ Edit `~/.config/aura/aura.toml`:
 Optional: `state_dir` sets where Aura keeps its database, worktrees, and logs.
 It defaults to `~/.local/share/aura`. Keep the path short, because a Unix socket
 path must be under 108 bytes.
+
+### Choosing the repository
+
+Approved work is merged into the `main_branch` of the repository in `[repo] path`,
+without you looking at it. Pick the target deliberately:
+
+- **A separate repository (recommended for the first runs).** Its checks are the
+  only safety net, so use one whose `default_checks` you trust. Set `path`, `main_branch`,
+  and `default_checks` for that project.
+- **The Aura checkout itself.** Agents then edit the code that runs the daemon. Changes
+  reach the running daemon only after you rebuild and restart it, which makes review
+  harder. If you choose this, keep `autonomy = "ask-plan"` and read every plan before
+  approving it. Use the checkout path in `path`, `main` in `main_branch`, and
+  `cargo test --workspace --quiet` in `default_checks`.
+
+Either way, the directory must be a git repository. Aura does not land a merge into a
+checkout that has uncommitted changes. It holds the merge and retries, so keep that
+checkout clean while Aura runs.
 
 ## 4. Start the daemon
 

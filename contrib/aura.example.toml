@@ -1,11 +1,15 @@
-# Example configuration for the aura-harness repository itself.
-# Copy to ~/.config/aura/aura.toml and adjust the paths.
+# Aura configuration template. Copy to ~/.config/aura/aura.toml, then edit [repo]
+# first. Everything else has a working default.
 
 # Where the database, worktrees, logs and the socket live.
 # state_dir = "/home/you/.local/share/aura"
 
 [repo]
-path = "/home/you/aura-harness"
+# REQUIRED: the repository the agents work on. Approved work is merged into
+# main_branch of this repository, unattended. Point it at a repository you are
+# happy to change automatically. Pointing it at the Aura checkout itself makes
+# the agents edit the code that runs the daemon (see INSTALL.md, step 3).
+path = "/absolute/path/to/your/repo"
 main_branch = "main"
 
 [defaults]
@@ -34,7 +38,8 @@ listen = "127.0.0.1:7878"
 [acceptance]
 # Acceptance commands run without a shell. Only these programs may start.
 allowed_programs = ["cargo"]
-# Added to every task. The merge is rejected if any fails.
+# Added to every task. The merge is rejected if any fails. The default is a Rust
+# test command. Replace it with your project's command, or use [] if it has none.
 default_checks = ["cargo test --workspace --quiet"]
 
 # Provider argument lists below are the built-in defaults. Confirm them against
