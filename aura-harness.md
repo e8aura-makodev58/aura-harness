@@ -36,20 +36,24 @@ into assignments and integrates the results. Workers carry out the assignments.
   finishes or abandons any merge in progress, leaves `master` clean, and sets every
   watcher to `STOP`. The human then names the new manager, which updates the role table in
   `handover.md` and `AGENTS.md` rule 10 on `master` before it writes any assignment.
-- The manager can do worker tasks itself, directly on `master`. For example, since
-  2026-10-17 the main agent does the Claude worker's tasks. Its merge log entry then reads
-  "**main agent** on master".
+- The manager can do worker tasks itself. Since 2026-10-19 the manager (Claude) runs its
+  session in its own worktree, `nebius-compass-claude`, and does its own tasks on the
+  `claude` branch. `master` stays checked out in `nebius-compass` as the **integration
+  checkout**: the manager uses it only through `git -C /home/makodev58/nebius-compass …`
+  and by running the suites there, to write assignments, merge reviewed branches (its own
+  `claude` branch included) and log merges. Git cannot check out `master` in two worktrees,
+  so the integration checkout must stay on `master`.
 
 ---
 
 ## 2. Layout
 
 ```
-/home/makodev58/amd-compass              master     ← manager only
-/home/makodev58/amd-compass-codex        codex      ← worker
-/home/makodev58/amd-compass-gemini       gemini     ← worker (excluded since 2026-10-17)
-/home/makodev58/amd-compass-codebuddy    codebuddy  ← worker (excluded since 2026-10-17)
-/home/makodev58/amd-compass-claude       claude     ← worker (unused; manager does these tasks)
+/home/makodev58/nebius-compass              master     ← integration checkout, manager only
+/home/makodev58/nebius-compass-codex        codex      ← worker
+/home/makodev58/nebius-compass-gemini       gemini     ← worker (excluded since 2026-10-17)
+/home/makodev58/nebius-compass-codebuddy    codebuddy  ← worker (excluded since 2026-10-17)
+/home/makodev58/nebius-compass-claude       claude     ← manager's session and own work (since 2026-10-19)
 ```
 
 All of these are worktrees of one repository, so every agent sees every branch through
@@ -59,8 +63,8 @@ folder.
 Setting up a new worker (the manager does this once):
 
 ```bash
-git -C /home/makodev58/amd-compass worktree add /home/makodev58/amd-compass-<agent> -b <agent>
-cd /home/makodev58/amd-compass-<agent> && npm install
+git -C /home/makodev58/nebius-compass worktree add /home/makodev58/nebius-compass-<agent> -b <agent>
+cd /home/makodev58/nebius-compass-<agent> && npm install
 ```
 
 Then add the agent to the role table, the **Ports** table, the **Watcher control** table
@@ -69,9 +73,9 @@ and the **Current task per agent** table in `handover.md`, and give it an empty
 
 ### Boundaries every agent keeps
 
-- **Stay in `amd` folders** (`AGENTS.md` rule 11). Work only in `amd-compass` and the
-  `amd-compass-<agent>` worktrees. Never touch other folders such as `~/compass` or
-  `~/ResponseCompass`.
+- **Stay in `nebius` folders** (`AGENTS.md` rule 11; replaced the former `amd`-folder rule
+  on 2026-10-19). Work only in `nebius-compass` and the `nebius-compass-<agent>` worktrees.
+  Never touch other folders such as `~/amd-compass`, `~/compass` or `~/ResponseCompass`.
 - **Own ports only.** Each agent has its own E2E port and preview port in the **Ports**
   table. It frees them as soon as it is done (check with `ss -ltn | grep :<port>`). It never
   binds ports that belong to other apps (3000, 3200) and never stops a process it did not
@@ -258,7 +262,7 @@ A shell form of the worker check, for reference:
 ```bash
 AGENT=codex
 while :; do
-  board=$(git -C /home/makodev58/amd-compass-$AGENT show master:handover.md)
+  board=$(git -C /home/makodev58/nebius-compass-$AGENT show master:handover.md)
   # Watcher control row, e.g. "| codex | RUN |"
   echo "$board" | grep -Eq "^\| $AGENT \| STOP" && break
   # Current task row, e.g. "| codex | none | — |"
