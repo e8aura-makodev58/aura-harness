@@ -23,6 +23,10 @@ running.
 | `contrib/` | systemd unit and example configuration |
 | `docs/` | Design and implementation guide |
 
+## Install and run
+
+See [INSTALL.md](INSTALL.md) for prerequisites, installation, configuration, and troubleshooting.
+
 ## Quick start
 
 ```bash
