@@ -1,0 +1,37 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/aura-core",
+    "crates/aura-store",
+    "crates/aura-git",
+    "crates/aura-adapters",
+    "crates/aurad",
+    "crates/aura-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.82"
+
+[workspace.dependencies]
+aura-core = { path = "crates/aura-core" }
+aura-store = { path = "crates/aura-store" }
+aura-git = { path = "crates/aura-git" }
+aura-adapters = { path = "crates/aura-adapters" }
+
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+crossterm = "0.28"
+globset = "0.4"
+libc = "0.2"
+ratatui = "0.29"
+regex = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+thiserror = "2"
+toml = "0.8"

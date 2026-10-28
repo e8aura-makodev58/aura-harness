@@ -1,0 +1,22 @@
+[package]
+name = "aurad"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+aura-adapters.workspace = true
+aura-core.workspace = true
+aura-git.workspace = true
+aura-store.workspace = true
+chrono.workspace = true
+libc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tiny_http = "0.12"
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,0 +1,248 @@
+:root {
+  --bg: #111418;
+  --panel: #171b21;
+  --line: #2a313b;
+  --text: #e6e9ef;
+  --muted: #8b95a5;
+  --accent: #5fb3ff;
+  --ok: #5fd38a;
+  --warn: #f2c35b;
+  --bad: #f06c6c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+#bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.brand {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.pill.ok {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.pill.bad {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+.pill.warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: #0c0f13;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 9px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button.danger {
+  color: var(--bad);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+#dock {
+  position: fixed;
+  top: 44px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.panel {
+  height: 100%;
+  overflow: auto;
+  padding: 10px 12px;
+}
+
+.panel h3 {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+tr.clickable {
+  cursor: pointer;
+}
+
+tr.clickable:hover td {
+  background: #1d232b;
+}
+
+tr.selected td {
+  background: #1f2a38;
+}
+
+.state-done {
+  color: var(--ok);
+}
+
+.state-blocked {
+  color: var(--bad);
+}
+
+.state-running,
+.state-review,
+.state-merge-queued {
+  color: var(--accent);
+}
+
+.state-proposed,
+.state-gated,
+.state-awaiting-approval {
+  color: var(--warn);
+}
+
+.state-cancelled {
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+.row input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+}
+
+pre.log {
+  margin: 0;
+  padding: 8px;
+  background: #0b0d10;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 12px/1.4 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.event {
+  font: 12px/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  border-bottom: 1px solid var(--line);
+  padding: 2px 0;
+  word-break: break-word;
+}
+
+.event .ts {
+  color: var(--muted);
+}
+
+.event .kind {
+  color: var(--accent);
+}
+
+.note {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--warn);
+  background: #1b1d1f;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.question {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+}
+
+.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Dockview tab and header tweaks so the theme sits well with the page. */
+.dockview-theme-dark {
+  --dv-activegroup-visibility-opacity: 1;
+}
